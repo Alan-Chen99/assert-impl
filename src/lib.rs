@@ -65,6 +65,7 @@
 //! # impl StaticTyping for Rust {}
 //! assert_impl!(!StaticTyping: Rust);
 //! ```
+#![no_std]
 
 #[macro_export]
 macro_rules! assert_impl {
