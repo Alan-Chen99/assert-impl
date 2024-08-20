@@ -69,24 +69,37 @@
 
 #[macro_export]
 macro_rules! assert_impl {
-    ($trait:path: $($ty:ty),+) => {{
-        struct Helper<T>(T);
-        trait AssertImpl { fn assert() {} }
-        impl<T: $trait> AssertImpl for Helper<T> {}
-        $(
-            Helper::<$ty>::assert();
-         )+
-    }};
-    (!$trait:path: $($ty:ty),+) => {{
-        struct Helper<T>(T);
-        trait AssertImpl { fn assert() {} }
-        impl<T: $trait> AssertImpl for Helper<T> {}
-        trait AssertNotImpl { fn assert() {} }
-        $(
-            impl AssertNotImpl for Helper<$ty> {}
-            Helper::<$ty>::assert();
-         )+
-    }};
+    ($trait:path: $($ty:ty),+) => {
+        const _: () = {
+            const fn helper<T: $trait>() {}
+            $(
+                const _: () = helper::<$ty>();
+            )+
+        };
+    };
+    (!$trait:path: $($ty:ty),+) => {
+        const _: () = {
+            #[allow(dead_code)]
+            #[allow(clippy::items_after_statements)]
+            fn helper_fn() {
+                struct Helper<T>(T);
+                trait AssertImpl {
+                    fn assert() {}
+                }
+                impl<T: $trait> AssertImpl for Helper<T> {}
+                trait AssertNotImpl {
+                    fn assert() {}
+                }
+                $(
+                    impl AssertNotImpl for Helper<$ty> {}
+                    Helper::<$ty>::assert();
+                )+
+            }
+        };
+    };
     ($trait:path: $($ty:ty,)+) => (assert_impl!($trait: $($ty),+));
     (!$trait:path: $($ty:ty,)+) => (assert_impl!(!$trait: $($ty),+));
 }
+
+assert_impl!(Sync: u8, usize);
+assert_impl!(!Sync: *mut u8, *const usize);
